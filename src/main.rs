@@ -1,4 +1,5 @@
-use std::io::Write;
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::io::{Write, Read};
 
 use eframe::egui;
 use egui::{Align, Layout, Vec2};
@@ -50,11 +51,21 @@ impl MyEguiApp {
 
         }
     }
+
+    fn handle_open_file(&mut self, ctx: &egui::Context) {
+        if ctx.input(|i| (i.key_pressed(egui::Key::O) && i.modifiers.ctrl)) {
+            let path = std::env::current_dir().unwrap();
+            let res = rfd::FileDialog::new().set_directory(&path).pick_file().unwrap();
+            println!("{}", res.to_string_lossy());
+            self.text = read_from_file(res.to_str().unwrap()).unwrap();
+        }
+    }
 }
 
 impl eframe::App for MyEguiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_save_file(ctx);
+        self.handle_open_file(ctx);
         egui::CentralPanel::default()
             .frame(eframe::egui::Frame::default())
             .show(ctx, |ui: &mut egui::Ui| {
@@ -83,4 +94,11 @@ fn save_text_to_file(text: &str, filename: &str) {
     } else {
         eprintln!("Failed to create file");
     }
+}
+
+fn read_from_file(filename: &str) -> Result<String, std::io::Error> {
+    let mut file = std::fs::File::open(filename)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
 }
