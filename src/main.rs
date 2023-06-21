@@ -39,12 +39,12 @@ impl MyEguiApp {
         Self::default()
     }
 
-    fn open_dropped_files(&mut self, ctx: &egui::Context) {
+    fn open_dropped_files(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         if !ctx.input(|i| i.raw.dropped_files.is_empty()) {
             let _text = ctx.input(|i| {
                 for file in &i.raw.dropped_files {
                     if let Some(path) = &file.path {
-                        self.text = self.read_from_file(path.to_str().unwrap()).unwrap();
+                        self.text = self.read_from_file(path.to_str().unwrap(), frame).unwrap();
                     }
                 }
                 // println!("{}", text);
@@ -54,34 +54,44 @@ impl MyEguiApp {
 
     fn handle_save_file(&mut self, ctx: &egui::Context) {
         if ctx.input(|i| (i.key_pressed(egui::Key::S) && i.modifiers.ctrl)) {
-            // println!("Save to file")
-            let path = std::env::current_dir().unwrap();
-            let res = rfd::FileDialog::new()
-                .set_file_name("test.txt")
-                .set_directory(&path)
-                .save_file()
-                .unwrap();
-            println!("{:#?}", res);
-            save_text_to_file(&self.text, &res.display().to_string());
-
-            // self.picked_path = Some(res.display().to_string()).unwrap();
+            self.save_file();
         }
     }
 
+    fn save_file(&mut self) {
+        let path = std::env::current_dir().unwrap();
+        let res = rfd::FileDialog::new()
+            .set_file_name("test.txt")
+            .set_directory(&path)
+            .save_file()
+            .unwrap();
+        println!("{:#?}", res);
+        save_text_to_file(&self.text, &res.display().to_string());
+    }
 
-    fn handle_open_file(&mut self, ctx: &egui::Context) {
+    fn handle_open_file(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         if ctx.input(|i| (i.key_pressed(egui::Key::O) && i.modifiers.ctrl)) {
-            let path = std::env::current_dir().unwrap();
-            let res = rfd::FileDialog::new()
-                .set_directory(&path)
-                .pick_file()
-                .unwrap();
-            println!("{}", res.to_string_lossy());
-            self.text = self.read_from_file(res.to_str().unwrap()).unwrap();
+            self.open_file(frame);
         }
     }
 
-    fn read_from_file(&mut self, filename: &str) -> Result<String, std::io::Error> { 
+    fn open_file(&mut self, frame: &mut eframe::Frame) {
+        let path = std::env::current_dir().unwrap();
+        let res = rfd::FileDialog::new()
+            .set_directory(&path)
+            .pick_file()
+            .unwrap();
+        println!("{}", res.to_string_lossy());
+        self.text = self.read_from_file(res.to_str().unwrap(), frame).unwrap();
+    }
+
+    fn read_from_file(
+        &mut self,
+        filename: &str,
+        frame: &mut eframe::Frame,
+    ) -> Result<String, std::io::Error> {
+        let title = format!("{} - {}", "Rustpad", filename);
+        frame.set_window_title(&title);
         let mut file = std::fs::File::open(filename)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -95,13 +105,23 @@ impl MyEguiApp {
 }
 
 impl eframe::App for MyEguiApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.handle_save_file(ctx);
-        self.handle_open_file(ctx);
-        self.open_dropped_files(ctx);
+        self.handle_open_file(ctx, frame);
+        self.open_dropped_files(ctx, frame);
         egui::CentralPanel::default()
             .frame(eframe::egui::Frame::default())
             .show(ctx, |ui: &mut egui::Ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Open").clicked() {
+                        // println!("Open file");
+                        self.open_file(frame);
+                    }
+                    if ui.button("Save").clicked() {
+                        // println!("Save file")
+                        self.save_file();
+                    }
+                });
                 ui.reset_style();
                 ui.with_layout(
                     Layout::left_to_right(Align::Max).with_cross_align(Align::Min),
@@ -128,4 +148,3 @@ fn save_text_to_file(text: &str, filename: &str) {
         eprintln!("Failed to create file");
     }
 }
-
