@@ -1,5 +1,7 @@
 # Rustpad
 
+Analog of Windows Notepad written in Rust. (and transparent)
+
 ## Prerequisites
 
 1. [Git](https://git-scm.com/downloads)
