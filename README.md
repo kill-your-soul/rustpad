@@ -1,4 +1,5 @@
 # Rustpad
+[![GitHub release](https://img.shields.io/github/release/kill-your-soul/rustpad.svg)](https://github.com/kill-your-soul/rustpad/releases)
 
 Analog of Windows Notepad written in Rust. (and transparent)
 
